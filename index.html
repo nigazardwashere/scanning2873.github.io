@@ -1,0 +1,401 @@
+хассан:
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>نصف بيضاوي مع شريط RGB ديناميكي</title>
+<style>
+:root {
+  --container-height: min(600px, 80vh);
+  --button-size: min(120px, 20vw);
+  --title-font-size: clamp(1.5rem, 4vw, 2.5rem);
+  --button-font-size: clamp(0.8rem, 2vw, 1rem);
+  --oval-height: min(100px, 15vh);
+}
+
+body {
+  margin: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  background-color: #000;
+  font-family: Arial, sans-serif;
+  overflow: hidden;
+}
+
+/* 🟢 شاشة البداية */
+#start-screen {
+  position: fixed;
+  inset: 0;
+  background: #000;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+  z-index: 9999;
+  transition: opacity 0.8s ease;
+}
+#start-screen button {
+  font-size: clamp(1.5rem, 5vw, 2rem);
+  color: white;
+  background: transparent;
+  border: 2px solid white;
+  padding: min(15px, 3vh) min(40px, 8vw);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: 0.3s;
+}
+#start-screen button:hover {
+  background: white;
+  color: black;
+}
+
+/* 🟣 شاشة العرض السينمائي */
+#intro-screen {
+  position: fixed;
+  inset: 0;
+  background: #000;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  opacity: 0;
+  visibility: hidden;
+  z-index: 9998;
+  transition: opacity 1s ease;
+}
+#intro-screen.active {
+  opacity: 1;
+  visibility: visible;
+}
+#intro-screen h1 {
+  font-size: clamp(1.8rem, 6vw, 2.5rem);
+  background: linear-gradient(90deg, red, orange, yellow, green, cyan, blue, violet);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: logoFade 3s ease-in-out;
+  text-align: center;
+  padding: 0 20px;
+}
+@keyframes logoFade {
+  0% { opacity: 0; transform: scale(0.7); }
+  50% { opacity: 1; transform: scale(1.1); }
+  100% { opacity: 0; transform: scale(1); }
+}
+
+/* باقي تنسيقات موقعك الأصلي (مع تحسينات للاستجابة) */
+.container {
+  position: relative;
+  width: 90%;
+  max-width: 1200px;
+  height: var(--container-height);
+  background-color: #fff;
+  border-radius: 15px;
+  overflow: hidden;
+  text-align: center;
+  z-index: 1;
+  display: none; /* نخفيها بالبداية */
+  margin: 20px auto;
+}
+.container::before {
+  content: "";
+  position: absolute;
+  inset: -5px;
+  background: linear-gradient(90deg, red, orange, yellow, green, cyan, blue, violet, red);
+  background-size: 400%;
+  border-radius: 25px;
+  z-index: 0;
+  animation: rgbMove 6s linear infinite;
+  filter: blur(4px);
+}
+.container::after {
+  content: "";
+  position: absolute;
+  inset: 3px;
+  background: white;
+  border-radius: 12px;
+  z-index: 1;
+}
+.half-oval.top-half, .half-oval.bottom-half {
+  position: relative;
+  width: 100%;
+  height: calc(var(--container-height) * 0.3);
+  background-color: #000;
+  z-index: 2;
+  overflow: hidden;
+}
+.half-oval.top-half { border-bottom-left-radius: 50% 100%; border-bottom-right-radius: 50% 100%; }
+.half-oval.bottom-half { border-top-left-radius: 50% 100%; border-top-right-radius: 50% 100%; position: absolute; bottom: 0; }
+.rgb-bar {
+  position: absolute;
+  left: 0;
+  width: 100%;
+  height: 12px;
+  background: linear-gradient(90deg, red, orange, yellow, green, cyan, blue, violet, red);
+  background-size: 400%;
+  animation: rgbMove 5s linear infinite;
+  z-index: 3;
+}
+.top-half .rgb-bar { bottom: 0; border-bottom-left-radius: 50% 100%; border-bottom-right-radius: 50% 100%; transform: translateY(50%); }
+.bottom-half .rgb-bar { top: 0; border-top-left-radius: 50% 100%; border-top-right-radius: 50% 100%; transform: translateY(-50%); }
+
+.title-container { 
+  position: absolute; 
+  top: min(40px, 7vh); 
+  width: 100%; 
+  text-align: center; 
+  z-index: 4; 
+  padding: 0 10px;
+}
+.title-container h1 {
+  font-size: var(--title-font-size);
+  font-weight: bold;
+  background: linear-gradient(90deg, red, orange, yellow, green, cyan, blue, violet);
+  background-size: 500% 100%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: gradientShift 25s linear infinite;
+  text-shadow: 0 0 15px rgba(255,255,255,0.7);
+  margin: 0;
+}
+.button-container {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-wrap: wrap;
+  gap: min(30px, 4vw);
+  justify-content: center;
+  align-items: center;
+  width: 90%;
+  max-width: 800px;
+  z-index: 4;
+  padding: 10px;
+}
+.action-button {
+  position: relative;
+  text-decoration: none;
+  width: var(--button-size);
+  height: var(--button-size);
+  background-color: transparent;
+  color: #000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform 0.3s, box-shadow 0.3s;
+  border-radius: 50% / 60%;
+  padding: 5px;
+  text-align: center;
+  overflow: hidden;
+  z-index: 2;
+}
+.action-button::before {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  background: linear-gradient(90deg, red, orange, yellow, green, cyan, blue, violet, red);
+  background-size: 400%;
+  border-radius: 50% / 60%;
+  animation: rgbMove 5s linear infinite;
+  filter: blur(3px);
+  z-index: 0;
+}
+.action-button::after {
+  content: "";
+  position: absolute;
+  inset: 2px;
+  background: white;
+  border-radius: 50% / 60%;
+  z-index: 1;
+}
+.label { 
+  position: relative; 
+  z-index: 2; 
+  font-size: var(--button-font-size); 
+  font-weight: bold; 
+  color: #000; 
+  line-height: 1.2;
+}
+@keyframes rgbMove { 0% { background-position: 0% 50%; } 100% { background-position: 400% 50%; } }
+@keyframes gradientShift { 0% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
+
+/* النص السفلي */
+.oval {
+  position: absolute;
+  bottom: 0;
+  width: min(500px, 90%);
+  left: 50%;
+  transform: translateX(-50%);
+  height: var(--oval-height);
+  background: linear-gradient(180deg, #111, #000);
+  border-top-left-radius: 50% 50px;
+  border-top-right-radius: 50% 50px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  overflow: visible;
+  z-index: 5;
+}
+.circles { 
+  display: flex; 
+  gap: min(25px, 5vw); 
+  justify-content: center; 
+  margin-bottom: 5px; 
+}
+.circle {
+  width: min(25px, 4vw);
+  height: min(25px, 4vw);
+  border-radius: 50%;
+  box-shadow: 0 0 10px rgba(255,255,255,0.6);
+  animation: colorMove 6s infinite alternate, pulse 3s infinite ease-in-out;
+}
+@keyframes colorMove {
+  0% { background: red; } 20% { background: orange; } 40% { background: yellow; }
+  60% { background: cyan; } 80% { background: violet; } 100% { background: green; }
+}
+@keyframes pulse { 0%,100%{transform:scale(1);opacity:0.8;} 50%{transform:scale(1.5);opacity:1;} }
+.credit-text {
+  font-size: clamp(0.7rem, 2vw, 0.9rem);
+  font-weight: bold;
+  background: linear-gradient(90deg, red, orange, yellow, green, cyan, blue, violet, pink, red);
+  background-size: 400%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: gradientShift 10s linear infinite, glow 2s ease-in-out infinite alternate;
+  text-align: center;
+  padding: 0 10px;
+  line-height: 1.3;
+}
+@keyframes glow { from { filter: brightness(0.8); } to { filter: brightness(1.6); } }
+
+/* استعلامات الوسائط لتحسين العرض على الشاشات الصغيرة */
+@media (max-width: 768px) {
+  .button-container {
+    gap: 15px;
+  }
+  
+  .action-button {
+    width: calc(var(--button-size) * 0.8);
+    height: calc(var(--button-size) * 0.8);
+  }
+  
+  .oval {
+    width: 90%;
+  }
+}
+
+@media (max-width: 480px) {
+  .button-container {
+    gap: 10px;
+  }
+  
+  .action-button {
+    width: calc(var(--button-size) * 0.7);
+    height: calc(var(--button-size) * 0.7);
+  }
+  
+  .circles {
+    gap: 15px;
+  }
+  
+  .credit-text {
+    font-size: 0.65rem;
+  }
+}
+.intro-image {
+  position: absolute;
+  top: 20px;
+  right: 20px; /* للزاوية اليمنى، إذا تريدها يسار غيّرها إلى left: 20px; */
+  width: 150px; /* الحجم الصغير */
+  height: auto;
+  border-radius: 15px;
+  box-shadow: 0 0 20px rgba(255,255,255,0.4);
+  opacity: 0;
+  transform: translateY(-20px) scale(0.9);
+  animation: cornerAppear 3s ease-in-out forwards;
+}
+.intro-imag {
+  position: absolute;
+  top: 20px;
+  left: 20px; /* للزاوية اليمنى، إذا تريدها يسار غيّرها إلى left: 20px; */
+  width: 150px; /* الحجم الصغير */
+  height: auto;
+  border-radius: 15px;
+  box-shadow: 0 0 20px rgba(255,255,255,0.4);
+  opacity: 0;
+  transform: translateY(-20px) scale(0.9);
+  animation: cornerAppear 3s ease-in-out forwards;
+}
+
+/* ✨ تأثير دخول الصورة */
+@keyframes cornerAppear {
+  0% { opacity: 0; transform: translateY(-20px) scale(0.9); }
+  50% { opacity: 1; transform: translateY(0) scale(1.05); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+</style>
+</head>
+<body>
+
+<!-- شاشة البداية -->
+<div id="start-screen">
+  <button id="start-btn">star</button>
+</div>
+<!-- شاشة العرض السينمائي -->
+<div id="intro-screen">
+  <img src="C:\Users\Zeyad IT\Downloads\photo_٢٠٢٥-١٠-٢٦_٠٠-٢٠-٥٣.jpg" alt="شعار يمين" class="intro-image">
+  <img src="C:\Users\Zeyad IT\Downloads\photo_2025-10-27_20-36-17.jpg" alt="شعار يسار" class="intro-imag">
+  <h1>Online Security Checker</h1>
+</div>
+
+
+<!-- كل واجهتك الأصلية هنا مع التحسينات -->
+<div class="container" id="main-content">
+  <div class="half-oval top-half"><div class="rgb-bar"></div></div>
+  <div class="title-container"><h1>Online Security Checker</h1></div>
+  <div class="button-container">
+    <a href="https://admin1212300.github.io/Safe-links/" class="action-button" target="_blank"><div class="inner-circle"></div><span class="label">safe links</span></a>
+    <a href="https://darkchaos33.github.io/" class="action-button"><div class="inner-circle"></div><span class="label">passord</span></a>
+    <a href="https://nigazardwashere.github.io/yoyoyoyoyoyo.github.io/" class="action-button"><div class="inner-circle"></div><span class="label">Website Vulnerability Scanner</span></a>
+    <a href="https://nigazardwashere.github.io/mynameis1722772.github.io/" class="action-button"><div class="inner-circle"></div><span class="label">Network Scanner</span></a>
+    <a href="https://nigazardwashere.github.io/hassanayad3734747/" class="action-button"><div class="inner-circle"></div><span class="label">safe SQL</span></a>
+  </div>
+  <div class="half-oval bottom-half"><div class="rgb-bar"></div></div>
+</div>
+
+<div class="oval">
+  <div class="circles">
+    <div class="circle"></div><div class="circle"></div><div class="circle"></div>
+    <div class="circle"></div><div class="circle"></div><div class="circle"></div>
+  </div>
+  <p class="credit-text">تم إنشاء هذا الموقع بواسطة - أحمد لؤي فاضل - أحمد نوار - حسن إياد - قسم علوم الأمن السيبراني</p>
+</div>
+
+<script>
+const startBtn = document.getElementById('start-btn');
+const startScreen = document.getElementById('start-screen');
+const introScreen = document.getElementById('intro-screen');
+const mainContent = document.getElementById('main-content');
+
+startBtn.addEventListener('click', () => {
+  startScreen.style.opacity = '0';
+  setTimeout(() => { startScreen.style.display = 'none'; }, 800);
+  setTimeout(() => { introScreen.classList.add('active'); }, 800);
+  setTimeout(() => {
+    introScreen.style.opacity = '0';
+    setTimeout(() => {
+      introScreen.style.display = 'none';
+      mainContent.style.display = 'block';
+    }, 1000);
+  }, 3500);
+});
+</script>
+
+</body>
+</html>
